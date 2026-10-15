@@ -1,0 +1,37 @@
+# Render Blueprint: deploys the Flask backend, which also serves the frontend.
+# Render reads this file when you choose New > Blueprint and pick this repo.
+services:
+  - type: web
+    name: dema
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend -w 1 --threads 4 --timeout 60 -b 0.0.0.0:$PORT wsgi:app
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL        # Neon connection string, entered in the Render dashboard
+        sync: false
+      - key: ADMIN_USERNAME      # first /admin login, entered in the Render dashboard
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY       # optional, for booking emails
+        sync: false
+      - key: CLINIC_NOTIFY_EMAIL
+        value: Feyselclinic@gmail.com
+      - key: MAIL_SENDER
+        value: Dr. Feysel Dermatology <felixwaweru200@gmail.com>
+      - key: CLINIC_TIMEZONE
+        value: Africa/Addis_Ababa
+      - key: BEHIND_PROXY
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: FLASK_DEBUG
+        value: "0"

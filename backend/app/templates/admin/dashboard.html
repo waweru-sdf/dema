@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="stats">
+  <a class="stat" href="{{ url_for('admin.appointments', status='pending') }}"><strong>{{ stats.pending }}</strong><span>Pending requests</span></a>
+  <a class="stat" href="{{ url_for('admin.appointments', **{'from': today.isoformat(), 'to': today.isoformat()}) }}"><strong>{{ stats.today }}</strong><span>Appointments today</span></a>
+  <div class="stat"><strong>{{ stats.week }}</strong><span>Next 7 days</span></div>
+  <a class="stat" href="{{ url_for('admin.messages', unread=1) }}"><strong>{{ stats.unread }}</strong><span>Unread messages</span></a>
+</div>
+<div class="card">
+  <h2 style="margin-top:0;font-size:18px;color:var(--ink)">Upcoming appointments</h2>
+  {% if upcoming %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Phone</th><th>Service</th><th>Branch</th><th>Doctor</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for a in upcoming %}
+      <tr>
+        <td><a href="{{ url_for('admin.appointment_detail', appt_id=a.id) }}">{{ a.date.strftime('%a %d %b') }}</a></td>
+        <td>{{ a.time }}</td><td>{{ a.full_name }}</td><td><a href="tel:{{ a.phone }}">{{ a.phone }}</a></td>
+        <td>{{ a.service_name }}</td><td>{{ a.branch_name }}</td><td>{{ a.doctor_name }}</td>
+        <td><span class="pill {{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted">No upcoming appointments.</p>{% endif %}
+</div>
+{% endblock %}

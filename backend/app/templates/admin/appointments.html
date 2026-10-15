@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}Appointments{% endblock %}
+{% block content %}
+<h1>Appointments</h1>
+<form class="card filters" method="get">
+  <div><label for="q">Search</label><input id="q" name="q" value="{{ f.q }}" placeholder="Name, phone, email, ref"></div>
+  <div><label for="status">Status</label><select id="status" name="status"><option value="">All</option>{% for s in STATUSES %}<option value="{{ s }}" {{ 'selected' if f.status == s }}>{{ s.replace('_',' ')|capitalize }}</option>{% endfor %}</select></div>
+  <div><label for="branch">Branch</label><select id="branch" name="branch"><option value="">All</option>{% for b in branches %}<option value="{{ b.slug }}" {{ 'selected' if f.branch == b.slug }}>{{ b.name }}</option>{% endfor %}</select></div>
+  <div><label for="doctor">Doctor</label><select id="doctor" name="doctor"><option value="">All</option>{% for d in doctors %}<option value="{{ d.slug }}" {{ 'selected' if f.doctor == d.slug }}>{{ d.name }}</option>{% endfor %}</select></div>
+  <div><label for="from">From</label><input id="from" type="date" name="from" value="{{ f['from'] }}"></div>
+  <div><label for="to">To</label><input id="to" type="date" name="to" value="{{ f.to }}"></div>
+  <div><button class="btn" type="submit"><i class="bi bi-funnel"></i> Filter</button></div>
+  <div><a class="btn ghost" href="{{ url_for('admin.export_csv', **request.args) }}"><i class="bi bi-download"></i> Export CSV</a></div>
+</form>
+<div class="card">
+  {% if page.items %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Ref</th><th>Date</th><th>Time</th><th>Patient</th><th>Phone</th><th>Service</th><th>Branch</th><th>Doctor</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for a in page.items %}
+      <tr>
+        <td><a href="{{ url_for('admin.appointment_detail', appt_id=a.id) }}">{{ a.reference }}</a></td>
+        <td>{{ a.date.strftime('%d %b %Y') }}</td><td>{{ a.time }}</td><td>{{ a.full_name }}</td>
+        <td><a href="tel:{{ a.phone }}">{{ a.phone }}</a></td><td>{{ a.service_name }}</td><td>{{ a.branch_name }}</td>
+        <td>{{ a.doctor_name }}</td><td><span class="pill {{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="pager">
+    {% if page.has_prev %}<a class="btn ghost" href="{{ url_for('admin.appointments', page=page.prev_num, **f) }}">Previous</a>{% endif %}
+    <span class="muted">Page {{ page.page }} of {{ page.pages }} ({{ page.total }} total)</span>
+    {% if page.has_next %}<a class="btn ghost" href="{{ url_for('admin.appointments', page=page.next_num, **f) }}">Next</a>{% endif %}
+  </div>
+  {% else %}<p class="muted">No appointments match these filters.</p>{% endif %}
+</div>
+{% endblock %}

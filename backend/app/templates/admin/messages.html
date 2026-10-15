@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+<h1>Messages</h1>
+<p>
+  <a class="btn {{ 'ghost' if only_unread }}" href="{{ url_for('admin.messages') }}">All</a>
+  <a class="btn {{ 'ghost' if not only_unread }}" href="{{ url_for('admin.messages', unread=1) }}">Unread</a>
+</p>
+<div class="card">
+  {% if page.items %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Received</th><th>From</th><th>Subject and message</th><th></th></tr></thead>
+    <tbody>
+    {% for m in page.items %}
+      <tr class="{{ 'unread' if not m.is_read }}">
+        <td style="white-space:nowrap">{{ m.created_at.strftime('%d %b %Y %H:%M') }}</td>
+        <td>{{ m.name }}<br><a href="mailto:{{ m.email }}?subject=Re: {{ m.subject|urlencode }}">{{ m.email }}</a></td>
+        <td><strong>{{ m.subject }}</strong><div style="font-weight:400;white-space:pre-wrap">{{ m.message }}</div></td>
+        <td>
+          <form method="post" action="{{ url_for('admin.toggle_message', msg_id=m.id) }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn ghost" type="submit">{{ 'Mark unread' if m.is_read else 'Mark read' }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="pager">
+    {% if page.has_prev %}<a class="btn ghost" href="{{ url_for('admin.messages', page=page.prev_num, unread=1 if only_unread else None) }}">Previous</a>{% endif %}
+    <span class="muted">Page {{ page.page }} of {{ page.pages }}</span>
+    {% if page.has_next %}<a class="btn ghost" href="{{ url_for('admin.messages', page=page.next_num, unread=1 if only_unread else None) }}">Next</a>{% endif %}
+  </div>
+  {% else %}<p class="muted">No messages.</p>{% endif %}
+</div>
+{% endblock %}

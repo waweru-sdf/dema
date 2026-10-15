@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ a.reference }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('admin.appointments') }}"><i class="bi bi-arrow-left"></i> All appointments</a></p>
+<h1>{{ a.full_name }} <span class="pill {{ a.status }}" style="vertical-align:middle">{{ a.status.replace('_',' ') }}</span></h1>
+<div class="card">
+  <dl>
+    <dt>Reference</dt><dd>{{ a.reference }}</dd>
+    <dt>Date and time</dt><dd>{{ a.date.strftime('%A %d %B %Y') }} at {{ a.time }}</dd>
+    <dt>Service</dt><dd>{{ a.service_name }}</dd>
+    <dt>Branch</dt><dd>{{ a.branch_name }}</dd>
+    <dt>Doctor</dt><dd>{{ a.doctor_name }}</dd>
+    <dt>Phone</dt><dd><a href="tel:{{ a.phone }}">{{ a.phone }}</a></dd>
+    <dt>Email</dt><dd><a href="mailto:{{ a.email }}">{{ a.email }}</a></dd>
+    <dt>Patient notes</dt><dd>{{ a.notes or '-' }}</dd>
+    <dt>Requested</dt><dd>{{ a.created_at.strftime('%d %b %Y %H:%M') }} UTC</dd>
+  </dl>
+</div>
+<form class="card" method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h2 style="margin-top:0;font-size:18px;color:var(--ink)">Update</h2>
+  <p><label for="status">Status</label><br>
+    <select id="status" name="status">{% for s in STATUSES %}<option value="{{ s }}" {{ 'selected' if a.status == s }}>{{ s.replace('_',' ')|capitalize }}</option>{% endfor %}</select></p>
+  <p><label><input type="checkbox" name="notify" checked> Email the patient when the status changes to confirmed or cancelled</label></p>
+  <p><label for="staff_notes">Staff notes (internal)</label><br><textarea id="staff_notes" name="staff_notes">{{ a.staff_notes or '' }}</textarea></p>
+  <button class="btn" type="submit"><i class="bi bi-check2"></i> Save</button>
+</form>
+{% endblock %}
