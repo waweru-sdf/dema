@@ -46,7 +46,10 @@ class Appointment(db.Model):
 
     @property
     def doctor_name(self):
-        return label("doctor", self.doctor)
+        if not self.doctor:
+            return "Any available doctor"
+        d = Doctor.query.filter_by(slug=self.doctor).first()  # includes hidden doctors, so old bookings still show a name
+        return d.name if d else self.doctor
 
     @property
     def service_name(self):
@@ -101,3 +104,67 @@ class AdminUser(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+
+# ---------------------------------------------------------------- editable website content
+
+class MediaFile(db.Model):
+    """An uploaded picture, stored in the database so it survives Render's reset-on-deploy disk."""
+    __tablename__ = "media_files"
+
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.LargeBinary, nullable=False)
+    mime = db.Column(db.String(40), nullable=False)
+    width = db.Column(db.Integer, nullable=False)
+    height = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+
+class ImageOverride(db.Model):
+    """Replaces a built-in picture such as assets/img/about.jpg without editing any HTML."""
+    __tablename__ = "image_overrides"
+
+    id = db.Column(db.Integer, primary_key=True)
+    path = db.Column(db.String(200), unique=True, nullable=False)
+    media_id = db.Column(db.Integer, db.ForeignKey("media_files.id"), nullable=False)
+    media = db.relationship("MediaFile")
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class Doctor(db.Model):
+    __tablename__ = "doctors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(40), unique=True, nullable=False)
+    name = db.Column(db.String(80), nullable=False)
+    role = db.Column(db.String(80), nullable=False, default="Dermatology team")
+    photo_id = db.Column(db.Integer, db.ForeignKey("media_files.id"), nullable=True)
+    photo_path = db.Column(db.String(200), nullable=True)  # built-in picture used until one is uploaded
+    active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    @property
+    def photo_url(self):
+        if self.photo_id:
+            return f"/media/{self.photo_id}"
+        return self.photo_path or "assets/img/logo.png"
+
+    def to_dict(self):
+        return {"slug": self.slug, "name": self.name, "role": self.role, "photo": self.photo_url}
+
+
+class GalleryImage(db.Model):
+    __tablename__ = "gallery_images"
+
+    id = db.Column(db.Integer, primary_key=True)
+    media_id = db.Column(db.Integer, db.ForeignKey("media_files.id"), nullable=True)
+    photo_path = db.Column(db.String(200), nullable=True)
+    caption = db.Column(db.String(150), nullable=False, default="")
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    @property
+    def url(self):
+        return f"/media/{self.media_id}" if self.media_id else self.photo_path
+
+    def to_dict(self):
+        return {"id": self.id, "url": self.url, "caption": self.caption}
