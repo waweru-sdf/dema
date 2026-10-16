@@ -43,13 +43,14 @@
   if (lb) {
     var lbImg = lb.querySelector("img");
     var close = function () { lb.classList.remove("open"); lbImg.src = ""; };
-    document.querySelectorAll("[data-lightbox]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        lbImg.src = btn.getAttribute("data-lightbox");
-        lbImg.alt = btn.querySelector("img").alt;
-        lb.classList.add("open");
-        lb.querySelector("button").focus();
-      });
+    // One listener on the document, so pictures added later by content.js open the lightbox too.
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-lightbox]");
+      if (!btn) return;
+      lbImg.src = btn.getAttribute("data-lightbox");
+      lbImg.alt = btn.querySelector("img").alt;
+      lb.classList.add("open");
+      lb.querySelector("button").focus();
     });
     lb.addEventListener("click", function (e) { if (e.target === lb || e.target.closest("button")) close(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
