@@ -49,6 +49,16 @@
     dl { display:grid; grid-template-columns: 150px 1fr; gap:8px 16px; margin:0; }
     dt { color:var(--muted); }
     dd { margin:0; color:var(--ink); }
+    aside .nav-title { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8fa9a3; margin:16px 12px 6px; }
+    .thumb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
+    .thumb { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+    .thumb img { width:100%; height:150px; object-fit:cover; border-radius:8px; background:#eef2f1; }
+    .thumb .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .thumb input[type=file] { width:100%; font-size:13px; }
+    .thumb input[type=text], .thumb input[type=number] { width:100%; }
+    .btn.small { padding:6px 12px; font-size:13px; }
+    .btn.danger { background:#fff; color:var(--danger); border-color:var(--danger); }
+    .tag { font-size:11px; background:var(--green-50); color:#255f22; padding:1px 8px; border-radius:999px; }
     .pager { display:flex; gap:8px; margin-top:14px; align-items:center; }
     .muted { color:var(--muted); }
     .unread td { font-weight:600; }
@@ -70,6 +80,11 @@
       <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
       <a href="{{ url_for('admin.appointments') }}" class="{{ 'active' if request.endpoint and 'appointment' in request.endpoint }}"><i class="bi bi-calendar2-week"></i> Appointments</a>
       <a href="{{ url_for('admin.messages') }}" class="{{ 'active' if request.endpoint == 'admin.messages' }}"><i class="bi bi-envelope"></i> Messages</a>
+      <div class="nav-title">Website content</div>
+      <a href="{{ url_for('admin.images') }}" class="{{ 'active' if request.endpoint == 'admin.images' }}"><i class="bi bi-images"></i> Site pictures</a>
+      <a href="{{ url_for('admin.doctors') }}" class="{{ 'active' if request.endpoint == 'admin.doctors' }}"><i class="bi bi-person-badge"></i> Doctors</a>
+      <a href="{{ url_for('admin.gallery') }}" class="{{ 'active' if request.endpoint == 'admin.gallery' }}"><i class="bi bi-card-image"></i> Gallery</a>
+      <div class="nav-title">&nbsp;</div>
       <a href="/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> View website</a>
       <form method="post" action="{{ url_for('admin.logout') }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">

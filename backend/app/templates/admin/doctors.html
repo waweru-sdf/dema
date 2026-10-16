@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}Doctors{% endblock %}
+{% block content %}
+<h1>Doctors</h1>
+<p class="muted">Doctors shown here appear on the Home and About pages and in the booking form. Lowest "Order" shows first.</p>
+
+<div class="card">
+  <h2 style="margin:0 0 12px;font-size:18px;color:var(--ink)">Add a doctor</h2>
+  <form method="post" action="{{ url_for('admin.doctor_new') }}" enctype="multipart/form-data" class="filters">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div><label>Name</label><input name="name" placeholder="Dr. Full Name" required maxlength="80"></div>
+    <div><label>Title / speciality</label><input name="role" placeholder="Dermatology team" maxlength="80"></div>
+    <div><label>Photo</label><input type="file" name="photo" accept="image/jpeg,image/png,image/webp"></div>
+    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Add doctor</button>
+  </form>
+</div>
+
+<div class="thumb-grid">
+{% for d in doctors %}
+  <form class="thumb" method="post" action="{{ url_for('admin.doctor_update', doctor_id=d.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <img src="/{{ d.photo_url.lstrip('/') }}" alt="" style="height:200px;object-position:top">
+    <input name="name" value="{{ d.name }}" required maxlength="80" aria-label="Name">
+    <input name="role" value="{{ d.role }}" maxlength="80" aria-label="Title">
+    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-label="New photo">
+    <div class="row">
+      <label>Order <input type="number" name="sort_order" value="{{ d.sort_order }}" style="width:70px"></label>
+      <label><input type="checkbox" name="active" {{ 'checked' if d.active }}> Show on website</label>
+    </div>
+    <div class="row">
+      <button class="btn small" type="submit">Save</button>
+      {% if booked.get(d.slug) %}<span class="muted" style="font-size:12px">{{ booked[d.slug] }} appointment(s)</span>
+      {% else %}<button class="btn small danger" type="submit" formaction="{{ url_for('admin.doctor_delete', doctor_id=d.id) }}" onclick="return confirm('Delete {{ d.name|e }}?')">Delete</button>{% endif %}
+    </div>
+  </form>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% block title %}Gallery{% endblock %}
+{% block content %}
+<h1>Gallery</h1>
+<p class="muted">The "Inside our clinic" pictures on the Home page. Lowest "Order" shows first.</p>
+<div class="card">
+  <form method="post" action="{{ url_for('admin.gallery_new') }}" enctype="multipart/form-data" class="filters">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div><label>Picture</label><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></div>
+    <div><label>Short description (for screen readers)</label><input name="caption" maxlength="150" style="width:280px"></div>
+    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Add picture</button>
+  </form>
+</div>
+<div class="thumb-grid">
+{% for g in rows %}
+  <form class="thumb" method="post" action="{{ url_for('admin.gallery_update', image_id=g.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <img src="/{{ g.url.lstrip('/') }}" alt="">
+    <input name="caption" value="{{ g.caption }}" maxlength="150" aria-label="Description">
+    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-label="Replace picture">
+    <div class="row"><label>Order <input type="number" name="sort_order" value="{{ g.sort_order }}" style="width:70px"></label></div>
+    <div class="row">
+      <button class="btn small" type="submit">Save</button>
+      <button class="btn small danger" type="submit" formaction="{{ url_for('admin.gallery_delete', image_id=g.id) }}" onclick="return confirm('Remove this picture?')">Remove</button>
+    </div>
+  </form>
+{% else %}<p class="muted">No pictures yet.</p>
+{% endfor %}
+</div>
+{% endblock %}

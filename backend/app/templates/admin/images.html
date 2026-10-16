@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block title %}Site pictures{% endblock %}
+{% block content %}
+<h1>Site pictures</h1>
+<p class="muted">Pick a new picture to replace one on the website. JPG, PNG or WebP up to 8 MB; large pictures are shrunk automatically.
+"Restore original" brings back the picture the website shipped with. Doctors and the gallery are on their own pages.</p>
+{% for group in ["Page pictures", "Service pictures"] %}
+<h2 style="color:var(--ink);font-size:18px;margin:24px 0 12px">{{ group }}</h2>
+<div class="thumb-grid">
+  {% for i in items if i.group == group %}
+  <div class="thumb">
+    <img src="{{ i.url }}?t={{ range(1, 10**6) | random }}" alt="">
+    <strong>{{ i.title }}</strong>
+    <span class="muted" style="font-size:12px">{{ i.path }} {% if i.changed %}<span class="tag">replaced</span>{% endif %}</span>
+    <form method="post" action="{{ url_for('admin.image_replace') }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="path" value="{{ i.path }}">
+      <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+      <div class="row" style="margin-top:8px"><button class="btn small" type="submit">Replace</button></div>
+    </form>
+    {% if i.changed %}
+    <form method="post" action="{{ url_for('admin.image_reset') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="path" value="{{ i.path }}">
+      <button class="btn small ghost" type="submit">Restore original</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}
