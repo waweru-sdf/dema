@@ -7,6 +7,7 @@ import click
 from flask import Flask, Response, abort, jsonify, redirect, request, send_from_directory
 from flask_cors import CORS
 
+from .blog_seed import seed_sample_posts
 from .clinic_data import DOCTORS
 from .config import Config
 from .media import MAX_UPLOAD_BYTES
@@ -44,6 +45,8 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()
         seed_content()
+        if app.config.get("SEED_SAMPLE_POSTS"):
+            seed_sample_posts(app.config["FRONTEND_DIR"])
         ensure_admin(app)
 
     register_frontend(app)
@@ -91,6 +94,11 @@ def register_frontend(app):
     @app.get("/")
     def home():
         return send_from_directory(frontend, "index.html")
+
+    @app.get("/blog/<slug>")
+    def blog_post_page(slug):
+        """Every article uses the same page; post.html loads the text from /api/posts/<slug>."""
+        return send_from_directory(frontend, "post.html")
 
     @app.get("/media/<int:media_id>")
     def media(media_id):
@@ -170,6 +178,15 @@ def register_cli(app):
         db.session.add(user)
         db.session.commit()
         click.echo(f"Admin user '{username}' saved.")
+
+    @app.cli.command("seed-blog")
+    def seed_blog():
+        """Add the three sample articles (only works while the blog has no posts)."""
+        from .models import BlogPost
+        if BlogPost.query.count():
+            raise click.ClickException("The blog already has posts. Delete them in /admin/blog first.")
+        seed_sample_posts(app.config["FRONTEND_DIR"])
+        click.echo("Three sample articles added.")
 
     @app.cli.command("init-db")
     def init_db():

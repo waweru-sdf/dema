@@ -86,6 +86,9 @@ class Config:
 
     JSON_SORT_KEYS = False
 
+    # Put three example articles in the blog the first time it is empty, so the section never looks bare.
+    SEED_SAMPLE_POSTS = _bool("SEED_SAMPLE_POSTS", True)
+
 
 class TestConfig(Config):
     TESTING = True
@@ -96,3 +99,4 @@ class TestConfig(Config):
     BREVO_API_KEY = ""
     ADMIN_USERNAME = ""
     RATE_LIMIT_PER_HOUR = 1000
+    SEED_SAMPLE_POSTS = False

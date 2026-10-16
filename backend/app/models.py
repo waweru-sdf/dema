@@ -168,3 +168,38 @@ class GalleryImage(db.Model):
 
     def to_dict(self):
         return {"id": self.id, "url": self.url, "caption": self.caption}
+
+
+class BlogPost(db.Model):
+    """A health article written by staff in /admin/blog and shown on the website."""
+    __tablename__ = "blog_posts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(90), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(60), nullable=False, default="General", index=True)
+    excerpt = db.Column(db.String(300), nullable=False, default="")
+    body = db.Column(db.Text, nullable=False, default="")
+    cover_id = db.Column(db.Integer, db.ForeignKey("media_files.id"), nullable=True)
+    published = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    published_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+    @property
+    def cover_url(self):
+        return f"/media/{self.cover_id}" if self.cover_id else None
+
+    @property
+    def read_minutes(self):
+        return max(1, round(len(self.body.split()) / 200))
+
+    def to_dict(self, full=False):
+        data = {
+            "slug": self.slug, "title": self.title, "category": self.category, "excerpt": self.excerpt,
+            "read_minutes": self.read_minutes,
+            "cover": self.cover_url, "published_at": self.published_at.date().isoformat() if self.published_at else None,
+        }
+        if full:
+            data["body"] = self.body
+        return data

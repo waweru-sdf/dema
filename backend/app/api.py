@@ -3,7 +3,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from . import emails
 from .clinic_data import ACTIVE_STATUSES, BRANCHES, SERVICES
-from .models import Appointment, ContactMessage, Doctor, GalleryImage, db
+from .models import Appointment, BlogPost, ContactMessage, Doctor, GalleryImage, db
 from .services import (SlotTakenError, ValidationError, availability, limiter, parse_date,
                        validate_appointment, validate_contact)
 
@@ -44,6 +44,34 @@ def site_content():
     """Doctors and gallery shown on the public pages (edited in /admin)."""
     gallery = GalleryImage.query.order_by(GalleryImage.sort_order, GalleryImage.id).all()
     resp = jsonify(doctors=[d.to_dict() for d in active_doctors()], gallery=[g.to_dict() for g in gallery])
+    resp.cache_control.no_cache = True
+    return resp
+
+
+@api.get("/posts")
+def list_posts():
+    """Published blog posts, newest first. ?category=Skin care filters, ?limit=3 caps the list."""
+    q = BlogPost.query.filter_by(published=True)
+    category = (request.args.get("category") or "").strip()
+    if category:
+        q = q.filter_by(category=category)
+    limit = request.args.get("limit", type=int)
+    q = q.order_by(BlogPost.published_at.desc(), BlogPost.id.desc())
+    if limit:
+        q = q.limit(max(1, min(limit, 50)))
+    categories = [c for (c,) in db.session.query(BlogPost.category).filter_by(published=True)
+                  .distinct().order_by(BlogPost.category).all()]
+    resp = jsonify(posts=[p.to_dict() for p in q.all()], categories=categories)
+    resp.cache_control.no_cache = True
+    return resp
+
+
+@api.get("/posts/<slug>")
+def get_post(slug):
+    post = BlogPost.query.filter_by(slug=slug, published=True).first()
+    if not post:
+        return jsonify(ok=False, message="Post not found"), 404
+    resp = jsonify(post=post.to_dict(full=True))
     resp.cache_control.no_cache = True
     return resp
 
