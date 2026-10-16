@@ -7,14 +7,14 @@ from pathlib import Path
 from datetime import date, timedelta
 from functools import wraps
 
-from flask import (Blueprint, Response, abort, current_app, flash, redirect, render_template, request,
-                   session, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from . import emails
 from .media import UploadError, delete_media, save_upload
 from .clinic_data import APPOINTMENT_STATUSES, BRANCHES, SERVICES
-from .models import (AdminUser, Appointment, ContactMessage, Doctor, GalleryImage, ImageOverride, db,
-                     utcnow)
+from .models import (AdminUser, Appointment, BlogPost, ContactMessage, Doctor, GalleryImage, ImageOverride,
+                     MediaFile, db, utcnow)
 from .services import clinic_now, limiter, parse_date
 
 admin = Blueprint("admin", __name__, url_prefix="/admin", template_folder="templates")
@@ -409,3 +409,132 @@ def gallery_delete(image_id):
     db.session.commit()
     flash("Picture removed from the gallery.", "success")
     return redirect(url_for("admin.gallery"))
+
+
+# ---------------------------------------------------------------- blog
+
+def post_slug(title, ignore_id=None):
+    base = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:70] or "post"
+    slug, n = base, 2
+    while True:
+        hit = BlogPost.query.filter_by(slug=slug).first()
+        if not hit or hit.id == ignore_id:
+            return slug
+        slug, n = f"{base}-{n}", n + 1
+
+
+MEDIA_REF = re.compile(r"/media/(\d+)")
+
+
+def plain_excerpt(body, n=200):
+    """First words of an article without the formatting marks."""
+    t = re.sub(r"!\[[^\]]*\]\([^)]*\)|@\[\w+\]\([^)]*\)", " ", body)       # pictures and videos
+    t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)                             # links keep their text
+    t = re.sub(r"^(#{1,3} |[-*] |\d+[.)] |> ?|---+$)", "", t, flags=re.M)
+    t = re.sub(r"[*_]{1,2}", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t[:n].rstrip() + ("..." if len(t) > n else "")
+
+
+def media_in_use(media_id):
+    """True if any doctor, gallery picture, replaced site picture or article still uses this upload."""
+    if (Doctor.query.filter_by(photo_id=media_id).first() or GalleryImage.query.filter_by(media_id=media_id).first()
+            or ImageOverride.query.filter_by(media_id=media_id).first()
+            or BlogPost.query.filter_by(cover_id=media_id).first()):
+        return True
+    needle = f"/media/{media_id}"
+    return any(re.search(re.escape(needle) + r"(?!\d)", b) for (b,) in db.session.query(BlogPost.body).all())
+
+
+def drop_unused_media(ids):
+    for i in set(ids):
+        if not media_in_use(i):
+            delete_media(i)
+
+
+def body_media_ids(body):
+    return {int(i) for i in MEDIA_REF.findall(body or "")}
+
+
+@admin.post("/blog/image")
+@login_required
+def blog_image():
+    """Editor button: upload a picture and get back the text to paste into the article."""
+    try:
+        media = save_upload(request.files.get("photo"))
+    except UploadError as e:
+        return jsonify(ok=False, message=str(e)), 400
+    db.session.commit()
+    return jsonify(ok=True, url=f"/media/{media.id}")
+
+
+def blog_categories():
+    return [c for (c,) in db.session.query(BlogPost.category).distinct().order_by(BlogPost.category).all()]
+
+
+@admin.get("/blog")
+@login_required
+def blog():
+    rows = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
+    return render_template("admin/blog.html", rows=rows)
+
+
+@admin.route("/blog/new", methods=["GET", "POST"])
+@admin.route("/blog/<int:post_id>", methods=["GET", "POST"])
+@login_required
+def blog_edit(post_id=None):
+    post = db.get_or_404(BlogPost, post_id) if post_id else None
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()[:150]
+        body = (request.form.get("body") or "").replace("\r\n", "\n").strip()
+        form = {"title": title, "category": (request.form.get("category") or "").strip()[:60] or "General",
+                "excerpt": (request.form.get("excerpt") or "").strip()[:300], "body": body,
+                "published": request.form.get("published") == "on"}
+        if not title or not body:
+            flash("A post needs a title and some text.", "error")
+            return render_template("admin/blog_edit.html", post=post, form=form, categories=blog_categories()), 400
+        new = post is None
+        old_ids = set() if new else body_media_ids(post.body)
+        if new:
+            post = BlogPost(slug=post_slug(title))
+            db.session.add(post)
+        post.title, post.category, post.excerpt, post.body = title, form["category"], form["excerpt"], body
+        if not post.excerpt:  # fall back to the first words of the text
+            post.excerpt = plain_excerpt(body)
+        if form["published"] and not post.published_at:
+            post.published_at = utcnow()
+        post.published = form["published"]
+        error = photo_from_form(post, "cover_id")
+        if error:
+            db.session.rollback()
+            flash(error, "error")
+            return render_template("admin/blog_edit.html", post=None if new else post, form=form,
+                                   categories=blog_categories()), 400
+        if request.form.get("remove_cover") == "on" and not request.files.get("photo", None):
+            old, post.cover_id = post.cover_id, None
+            db.session.flush()
+            delete_media(old)
+        db.session.flush()
+        drop_unused_media(old_ids - body_media_ids(body))  # pictures taken out of the text
+        db.session.commit()
+        flash("Post saved and live." if post.published else "Draft saved. It is not on the website yet.", "success")
+        return redirect(url_for("admin.blog"))
+    form = None
+    if post:
+        form = {"title": post.title, "category": post.category, "excerpt": post.excerpt, "body": post.body,
+                "published": post.published}
+    return render_template("admin/blog_edit.html", post=post, form=form, categories=blog_categories())
+
+
+@admin.post("/blog/<int:post_id>/delete")
+@login_required
+def blog_delete(post_id):
+    post = db.get_or_404(BlogPost, post_id)
+    old_cover, inline = post.cover_id, body_media_ids(post.body)
+    db.session.delete(post)
+    db.session.flush()
+    delete_media(old_cover)
+    drop_unused_media(inline)
+    db.session.commit()
+    flash("Post deleted.", "success")
+    return redirect(url_for("admin.blog"))

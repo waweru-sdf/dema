@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block title %}Blog{% endblock %}
+{% block content %}
+<h1>Blog</h1>
+<p><a class="btn" href="{{ url_for('admin.blog_edit') }}"><i class="bi bi-plus-lg"></i> Write a new post</a></p>
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap"><table>
+    <thead><tr><th></th><th>Title</th><th>Category</th><th>Status</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+      <tr>
+        <td style="width:70px">{% if p.cover_url %}<img src="{{ p.cover_url }}" alt="" style="width:60px;height:45px;object-fit:cover;border-radius:6px">{% endif %}</td>
+        <td><a href="{{ url_for('admin.blog_edit', post_id=p.id) }}"><strong>{{ p.title }}</strong></a></td>
+        <td>{{ p.category }}</td>
+        <td><span class="pill {{ 'confirmed' if p.published else 'pending' }}">{{ 'Published' if p.published else 'Draft' }}</span></td>
+        <td style="white-space:nowrap">{{ (p.published_at or p.created_at).strftime('%d %b %Y') }}</td>
+        <td style="white-space:nowrap">
+          {% if p.published %}<a class="btn small ghost" href="/blog/{{ p.slug }}" target="_blank" rel="noopener">View</a>{% endif %}
+          <a class="btn small ghost" href="{{ url_for('admin.blog_edit', post_id=p.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('admin.blog_delete', post_id=p.id) }}" style="display:inline">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn small danger" type="submit" onclick="return confirm('Delete this post?')">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted">No posts yet. The Blog section stays hidden on the website until you publish one.</p>{% endif %}
+</div>
+{% endblock %}

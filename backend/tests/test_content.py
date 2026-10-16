@@ -220,3 +220,170 @@ def test_gallery_add_reorder_remove(app, staff):
 def test_gallery_rejects_bad_upload(staff):
     r = post(staff, "/admin/gallery/new", photo=(io.BytesIO(b"nope"), "x.jpg"))
     assert b"not a picture" in r.data
+
+
+# ---------------------------------------------------------------- blog
+
+def write_post(staff, **kw):
+    data = {"title": "Sun care tips", "category": "Skin care", "excerpt": "", "body": "Wear sunscreen.\n\n## Why\n\nUV harms skin.",
+            "published": "on"}
+    data.update(kw)
+    data = {k: v for k, v in data.items() if v is not None}
+    return post(staff, "/admin/blog/new", **data)
+
+
+def test_blog_needs_login_and_is_empty_at_first(app):
+    c = app.test_client()
+    assert c.get("/admin/blog").status_code == 302
+    assert c.get("/api/posts").get_json() == {"posts": [], "categories": []}
+    assert c.get("/api/posts/nope").status_code == 404
+
+
+def test_publish_post_shows_in_api(app, staff):
+    r = write_post(staff, photo=(png(), "cover.png"))
+    assert b"Post saved and live" in r.data
+    data = app.test_client().get("/api/posts").get_json()
+    assert data["categories"] == ["Skin care"]
+    p = data["posts"][0]
+    assert p["slug"] == "sun-care-tips" and p["published_at"] and p["cover"].startswith("/media/")
+    assert p["excerpt"].startswith("Wear sunscreen.") and "body" not in p
+    full = app.test_client().get("/api/posts/sun-care-tips").get_json()["post"]
+    assert "## Why" in full["body"]
+
+
+def test_draft_is_hidden_until_published(app, staff):
+    write_post(staff, published=None)
+    c = app.test_client()
+    assert c.get("/api/posts").get_json()["posts"] == []
+    assert c.get("/api/posts/sun-care-tips").status_code == 404
+    with app.app_context():
+        from app.models import BlogPost
+        pid = BlogPost.query.one().id
+    post(staff, f"/admin/blog/{pid}", title="Sun care tips", category="Skin care", body="Text", published="on")
+    assert len(c.get("/api/posts").get_json()["posts"]) == 1
+    post(staff, f"/admin/blog/{pid}", title="Sun care tips", category="Skin care", body="Text")  # unpublish
+    assert c.get("/api/posts").get_json()["posts"] == []
+
+
+def test_category_filter_limit_and_unique_slugs(app, staff):
+    write_post(staff, title="One", category="Hair")
+    write_post(staff, title="One", category="Cosmetic")
+    write_post(staff, title="Three", category="Hair")
+    c = app.test_client()
+    assert sorted(c.get("/api/posts").get_json()["categories"]) == ["Cosmetic", "Hair"]
+    assert len(c.get("/api/posts?category=Hair").get_json()["posts"]) == 2
+    assert len(c.get("/api/posts?limit=1").get_json()["posts"]) == 1
+    assert sorted(p["slug"] for p in c.get("/api/posts").get_json()["posts"]) == ["one", "one-2", "three"]
+
+
+def test_post_validation_and_edit_keeps_slug(app, staff):
+    assert b"needs a title" in write_post(staff, title="", body="x").data
+    write_post(staff)
+    with app.app_context():
+        from app.models import BlogPost
+        pid = BlogPost.query.one().id
+    post(staff, f"/admin/blog/{pid}", title="Totally new title", category="News", body="Changed", published="on")
+    got = app.test_client().get("/api/posts/sun-care-tips").get_json()["post"]
+    assert got["title"] == "Totally new title" and got["body"] == "Changed", "link must stay the same after editing"
+
+
+def test_remove_cover_and_delete_clean_up_pictures(app, staff):
+    write_post(staff, photo=(png(), "c.png"))
+    with app.app_context():
+        from app.models import BlogPost
+        pid = BlogPost.query.one().id
+        assert MediaFile.query.count() == 1
+    post(staff, f"/admin/blog/{pid}", title="Sun care tips", category="Skin care", body="x", published="on", remove_cover="on")
+    with app.app_context():
+        assert MediaFile.query.count() == 0
+    post(staff, f"/admin/blog/{pid}", title="Sun care tips", category="Skin care", body="x", published="on", photo=(png(), "c.png"))
+    post(staff, f"/admin/blog/{pid}/delete")
+    with app.app_context():
+        assert BlogPost.query.count() == 0 and MediaFile.query.count() == 0
+
+
+def test_blog_urls_serve_pages(app, tmp_path):
+    (tmp_path / "x").mkdir(exist_ok=True)
+    site = app.config["FRONTEND_DIR"]
+    from pathlib import Path
+    Path(site, "post.html").write_text("ARTICLE PAGE")
+    Path(site, "blog.html").write_text("BLOG LIST")
+    c = app.test_client()
+    assert c.get("/blog/anything-here").data == b"ARTICLE PAGE"
+    assert c.get("/blog").data == b"BLOG LIST"
+
+
+# ---------------------------------------------------------------- flexible blog
+
+def seeded_app(tmp_path, with_covers):
+    site = tmp_path / "seedsite"
+    (site / "assets" / "img" / "services").mkdir(parents=True)
+    (site / "index.html").write_text("home")
+    if with_covers:
+        for n in ("cancer-screening", "hair-nail", "hydrafacial"):
+            Image.new("RGB", (60, 40), (10, 120, 60)).save(site / "assets" / "img" / "services" / f"{n}.jpg")
+
+    class Cfg(TestConfig):
+        FRONTEND_DIR = str(site)
+        SEED_SAMPLE_POSTS = True
+
+    limiter._hits.clear()
+    return create_app(Cfg)
+
+
+def test_blog_starts_with_three_sample_posts_with_covers(tmp_path):
+    app = seeded_app(tmp_path, with_covers=True)
+    data = app.test_client().get("/api/posts").get_json()
+    assert len(data["posts"]) == 3
+    assert sorted(data["categories"]) == ["Cosmetic", "Hair and nails", "Skin care"]
+    assert all(p["cover"].startswith("/media/") and p["read_minutes"] >= 1 and p["published_at"] for p in data["posts"])
+    assert data["posts"][0]["published_at"] > data["posts"][-1]["published_at"], "newest first"
+    body = app.test_client().get("/api/posts/your-first-cosmetic-dermatology-visit").get_json()["post"]["body"]
+    assert "![" in body and "1. " in body and "**" in body
+
+
+def test_samples_survive_restart_without_duplicates_and_missing_covers_are_ok(tmp_path):
+    app = seeded_app(tmp_path, with_covers=False)
+    posts = app.test_client().get("/api/posts").get_json()["posts"]
+    assert len(posts) == 3 and all(p["cover"] is None for p in posts)
+    from app.blog_seed import seed_sample_posts
+    with app.app_context():
+        seed_sample_posts(app.config["FRONTEND_DIR"])
+        from app.models import BlogPost
+        assert BlogPost.query.count() == 3
+
+
+def test_inline_picture_upload_and_cleanup(app, staff):
+    with staff.session_transaction() as s:
+        token = s["_csrf"]
+    r = staff.post("/admin/blog/image", data={"photo": (png(), "in.png"), "_csrf": token}, content_type="multipart/form-data")
+    url = r.get_json()["url"]
+    assert r.get_json()["ok"] and url.startswith("/media/")
+    bad = staff.post("/admin/blog/image", data={"photo": (io.BytesIO(b"x"), "x.png"), "_csrf": token}, content_type="multipart/form-data")
+    assert bad.status_code == 400 and not bad.get_json()["ok"]
+
+    write_post(staff, body=f"Intro\n\n![Caption]({url})")
+    assert app.test_client().get(url).status_code == 200
+    with app.app_context():
+        from app.models import BlogPost
+        pid = BlogPost.query.one().id
+    post(staff, f"/admin/blog/{pid}", title="Sun care tips", category="Skin care", body="Text only now", published="on")
+    assert app.test_client().get(url).status_code == 404, "picture removed from the text is deleted"
+
+
+def test_deleting_a_post_never_deletes_pictures_used_elsewhere(app, staff):
+    post(staff, "/admin/doctors/new", name="Dr. Pic", photo=(png(), "d.png"))
+    with app.app_context():
+        photo = Doctor.query.filter_by(slug="dr-pic").one().photo_url
+    write_post(staff, body=f"Sneaky\n\n![x]({photo})")
+    with app.app_context():
+        from app.models import BlogPost
+        pid = BlogPost.query.one().id
+    post(staff, f"/admin/blog/{pid}/delete")
+    assert app.test_client().get(photo).status_code == 200
+
+
+def test_excerpt_drops_formatting_marks(app, staff):
+    write_post(staff, body="## Title line\n\n![cap](/media/9)\n\nSome **bold** words and a [link](/appointment.html).\n\n- item")
+    ex = app.test_client().get("/api/posts").get_json()["posts"][0]["excerpt"]
+    assert ex == "Title line Some bold words and a link. item"

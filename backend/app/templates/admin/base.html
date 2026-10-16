@@ -81,6 +81,7 @@
       <a href="{{ url_for('admin.appointments') }}" class="{{ 'active' if request.endpoint and 'appointment' in request.endpoint }}"><i class="bi bi-calendar2-week"></i> Appointments</a>
       <a href="{{ url_for('admin.messages') }}" class="{{ 'active' if request.endpoint == 'admin.messages' }}"><i class="bi bi-envelope"></i> Messages</a>
       <div class="nav-title">Website content</div>
+      <a href="{{ url_for('admin.blog') }}" class="{{ 'active' if request.endpoint and 'blog' in request.endpoint }}"><i class="bi bi-journal-text"></i> Blog</a>
       <a href="{{ url_for('admin.images') }}" class="{{ 'active' if request.endpoint == 'admin.images' }}"><i class="bi bi-images"></i> Site pictures</a>
       <a href="{{ url_for('admin.doctors') }}" class="{{ 'active' if request.endpoint == 'admin.doctors' }}"><i class="bi bi-person-badge"></i> Doctors</a>
       <a href="{{ url_for('admin.gallery') }}" class="{{ 'active' if request.endpoint == 'admin.gallery' }}"><i class="bi bi-card-image"></i> Gallery</a>
