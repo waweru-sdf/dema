@@ -19,8 +19,9 @@
 
   // Highlight the current page in the nav
   var page = location.pathname.split("/").pop() || "index.html";
+  if (location.pathname.indexOf("/blog/") === 0) page = "post.html"; // every article lives at /blog/<slug>
   document.querySelectorAll(".nav a.nav-link").forEach(function (a) {
-    var href = a.getAttribute("href");
+    var href = a.getAttribute("href").replace(/^\//, "");
     var group = a.getAttribute("data-group") || "";
     if (href === page || group.split(" ").indexOf(page) !== -1) a.classList.add("active");
   });
