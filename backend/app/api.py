@@ -2,8 +2,8 @@
 from flask import Blueprint, current_app, jsonify, request
 
 from . import emails
-from .clinic_data import ACTIVE_STATUSES, BRANCHES, DOCTORS, SERVICES
-from .models import Appointment, ContactMessage, db
+from .clinic_data import ACTIVE_STATUSES, BRANCHES, SERVICES
+from .models import Appointment, ContactMessage, Doctor, GalleryImage, db
 from .services import (SlotTakenError, ValidationError, availability, limiter, parse_date,
                        validate_appointment, validate_contact)
 
@@ -35,10 +35,23 @@ def health():
     return jsonify(ok=True)
 
 
+def active_doctors():
+    return Doctor.query.filter_by(active=True).order_by(Doctor.sort_order, Doctor.id).all()
+
+
+@api.get("/site")
+def site_content():
+    """Doctors and gallery shown on the public pages (edited in /admin)."""
+    gallery = GalleryImage.query.order_by(GalleryImage.sort_order, GalleryImage.id).all()
+    resp = jsonify(doctors=[d.to_dict() for d in active_doctors()], gallery=[g.to_dict() for g in gallery])
+    resp.cache_control.no_cache = True
+    return resp
+
+
 @api.get("/meta")
 def meta():
     return jsonify(
-        doctors=DOCTORS,
+        doctors=[d.to_dict() for d in active_doctors()],
         services=SERVICES,
         branches=[{"slug": b["slug"], "name": b["name"]} for b in BRANCHES],
         slots=current_app.config["APPOINTMENT_SLOTS"],

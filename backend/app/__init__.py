@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 
 import click
-from flask import Flask, abort, jsonify, redirect, request, send_from_directory
+from flask import Flask, Response, abort, jsonify, redirect, request, send_from_directory
 from flask_cors import CORS
 
+from .clinic_data import DOCTORS
 from .config import Config
-from .models import AdminUser, db
+from .media import MAX_UPLOAD_BYTES
+from .models import AdminUser, Doctor, GalleryImage, ImageOverride, MediaFile, db
 
 # Old page names from the previous site, redirected so existing links keep working.
 LEGACY_REDIRECTS = {
@@ -23,6 +25,7 @@ LEGACY_REDIRECTS = {
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
+    app.config.setdefault("MAX_CONTENT_LENGTH", MAX_UPLOAD_BYTES + 1024 * 1024)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -40,12 +43,26 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        seed_content()
         ensure_admin(app)
 
     register_frontend(app)
     register_security_headers(app)
     register_cli(app)
     return app
+
+
+def seed_content():
+    """First start only: copy the built-in doctors and gallery into the database so staff can edit them."""
+    if Doctor.query.count() == 0:
+        for i, d in enumerate(DOCTORS):
+            db.session.add(Doctor(slug=d["slug"], name=d["name"], role="Dermatology team", sort_order=i,
+                                  photo_path=f"assets/img/doctors/{d['slug']}.jpg"))
+    if GalleryImage.query.count() == 0:
+        for i in range(1, 5):
+            db.session.add(GalleryImage(photo_path=f"assets/img/gallery/{i}.jpg", sort_order=i,
+                                        caption=f"Clinic gallery image {i}"))
+    db.session.commit()
 
 
 def ensure_admin(app):
@@ -75,10 +92,30 @@ def register_frontend(app):
     def home():
         return send_from_directory(frontend, "index.html")
 
+    @app.get("/media/<int:media_id>")
+    def media(media_id):
+        """Uploaded pictures. The id changes on every upload, so browsers may cache them for good."""
+        row = db.session.get(MediaFile, media_id)
+        if not row:
+            abort(404)
+        resp = Response(row.data, mimetype=row.mime)
+        resp.cache_control.public = True
+        resp.cache_control.max_age = 60 * 60 * 24 * 365
+        resp.cache_control.immutable = True
+        return resp
+
     @app.get("/<path:filename>")
     def static_site(filename):
         if filename in LEGACY_REDIRECTS:
             return redirect("/" + LEGACY_REDIRECTS[filename], code=301)
+        if filename.startswith("assets/img/"):
+            # A picture staff replaced in /admin/images wins over the file shipped with the site.
+            over = ImageOverride.query.filter_by(path=filename).first()
+            if over:
+                resp = Response(over.media.data, mimetype=over.media.mime)
+                resp.cache_control.public = True
+                resp.cache_control.max_age = 300
+                return resp
         target = (frontend / filename).resolve()
         if frontend not in target.parents and target != frontend:
             abort(404)
@@ -89,7 +126,8 @@ def register_frontend(app):
         response = send_from_directory(frontend, filename)
         if filename.startswith("assets/"):
             response.cache_control.public = True
-            response.cache_control.max_age = 60 * 60 * 24 * 7
+            # Pictures can be replaced from /admin, so keep their cache short; code and fonts can stay a week.
+            response.cache_control.max_age = 300 if filename.startswith("assets/img/") else 60 * 60 * 24 * 7
         return response
 
     @app.errorhandler(404)

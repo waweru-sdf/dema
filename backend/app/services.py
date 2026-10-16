@@ -9,8 +9,8 @@ from zoneinfo import ZoneInfo
 from flask import current_app
 from sqlalchemy import func
 
-from .clinic_data import ACTIVE_STATUSES, BRANCH_BY_SLUG, DOCTOR_BY_SLUG, SERVICE_BY_SLUG
-from .models import Appointment
+from .clinic_data import ACTIVE_STATUSES, BRANCH_BY_SLUG, SERVICE_BY_SLUG
+from .models import Appointment, Doctor
 
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 PHONE_RE = re.compile(r"^\+?[0-9\s-]{9,15}$")
@@ -117,7 +117,7 @@ def validate_appointment(payload):
         errors["service"] = "Please choose a service."
     if data["branch"] not in BRANCH_BY_SLUG:
         errors["branch"] = "Please choose a branch."
-    if data["doctor"] and data["doctor"] not in DOCTOR_BY_SLUG:
+    if data["doctor"] and not Doctor.query.filter_by(slug=data["doctor"], active=True).first():
         errors["doctor"] = "Please choose a doctor from the list."
 
     day = parse_date(payload.get("date"))
