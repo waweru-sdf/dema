@@ -46,10 +46,7 @@ class Appointment(db.Model):
 
     @property
     def doctor_name(self):
-        if not self.doctor:
-            return "Any available doctor"
-        d = Doctor.query.filter_by(slug=self.doctor).first()  # includes hidden doctors, so old bookings still show a name
-        return d.name if d else self.doctor
+        return label("doctor", self.doctor)
 
     @property
     def service_name(self):
@@ -131,28 +128,6 @@ class ImageOverride(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
 
-class Doctor(db.Model):
-    __tablename__ = "doctors"
-
-    id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String(40), unique=True, nullable=False)
-    name = db.Column(db.String(80), nullable=False)
-    role = db.Column(db.String(80), nullable=False, default="Dermatology team")
-    photo_id = db.Column(db.Integer, db.ForeignKey("media_files.id"), nullable=True)
-    photo_path = db.Column(db.String(200), nullable=True)  # built-in picture used until one is uploaded
-    active = db.Column(db.Boolean, nullable=False, default=True, index=True)
-    sort_order = db.Column(db.Integer, nullable=False, default=0)
-
-    @property
-    def photo_url(self):
-        if self.photo_id:
-            return f"/media/{self.photo_id}"
-        return self.photo_path or "assets/img/logo.png"
-
-    def to_dict(self):
-        return {"slug": self.slug, "name": self.name, "role": self.role, "photo": self.photo_url}
-
-
 class GalleryImage(db.Model):
     __tablename__ = "gallery_images"
 
@@ -198,8 +173,11 @@ class BlogPost(db.Model):
         data = {
             "slug": self.slug, "title": self.title, "category": self.category, "excerpt": self.excerpt,
             "read_minutes": self.read_minutes,
-            "cover": self.cover_url, "published_at": self.published_at.date().isoformat() if self.published_at else None,
+            "cover": self.cover_url, "image": self.cover_url,
+            "published_at": self.published_at.date().isoformat() if self.published_at else None,
+            "date": self.published_at.date().isoformat() if self.published_at else None,
         }
         if full:
             data["body"] = self.body
+            data["updated_at"] = (self.updated_at or utcnow()).date().isoformat()
         return data

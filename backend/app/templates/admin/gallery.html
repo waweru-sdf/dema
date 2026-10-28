@@ -2,8 +2,8 @@
 {% block title %}Gallery{% endblock %}
 {% block content %}
 <h1>Gallery</h1>
-<p class="muted">The "Inside our clinic" pictures on the Home page. Lowest "Order" shows first.</p>
-<div class="card">
+<p class="muted">The "Inside the clinic" pictures on the About page. Lowest "Order" shows first.</p>
+<div class="card" id="add">
   <form method="post" action="{{ url_for('admin.gallery_new') }}" enctype="multipart/form-data" class="filters">
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <div><label>Picture</label><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></div>
@@ -15,7 +15,7 @@
 {% for g in rows %}
   <form class="thumb" method="post" action="{{ url_for('admin.gallery_update', image_id=g.id) }}" enctype="multipart/form-data">
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-    <img src="/{{ g.url.lstrip('/') }}" alt="">
+    <img src="/{{ g.url.lstrip('/') }}" alt="" loading="lazy">
     <input name="caption" value="{{ g.caption }}" maxlength="150" aria-label="Description">
     <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-label="Replace picture">
     <div class="row"><label>Order <input type="number" name="sort_order" value="{{ g.sort_order }}" style="width:70px"></label></div>

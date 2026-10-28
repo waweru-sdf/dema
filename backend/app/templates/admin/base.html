@@ -19,6 +19,12 @@
     aside nav a { display:flex; gap:10px; align-items:center; padding:10px 12px; color:#d8e6e3; border-radius:8px; margin-bottom:2px; }
     aside nav a:hover, aside nav a.active { background:rgba(255,255,255,.08); color:#fff; }
     aside .badge { margin-left:auto; background:#e67134; color:#fff; border-radius:999px; font-size:12px; padding:1px 8px; }
+    aside .navgroup { margin:18px 12px 6px; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#8fb0a8; }
+    .field { margin-bottom:16px; } .field label { display:block; font-weight:600; margin-bottom:4px; color:var(--ink); } .field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea { width:100%; } .help { color:var(--muted); font-size:13px; margin-top:4px; }
+    .group { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--green); margin:26px 0 12px; padding-top:18px; border-top:1px solid var(--line); } .group:first-of-type { border-top:0; margin-top:0; padding-top:0; }
+    .checks { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:6px 14px; } .checks label { font-weight:400; display:flex; gap:8px; align-items:center; }
+    .btn.danger { background:#fff; color:var(--danger); border-color:#e8b9b3; } .btn.small { padding:5px 12px; font-size:13px; }
+    .pill.approved { background:var(--green-50); color:#255f22; } .pill.rejected { background:#fdecea; color:#8e2a20; } .pill.sample { background:#fff6c9; color:#7a6410; } .pill.draft { background:#eef1f5; color:#55606d; }
     aside form button { all:unset; display:flex; gap:10px; padding:10px 12px; color:#d8e6e3; cursor:pointer; }
     main { padding:28px 32px; min-width:0; }
     h1 { font-size:24px; color:var(--ink); margin:0 0 20px; }
@@ -49,22 +55,41 @@
     dl { display:grid; grid-template-columns: 150px 1fr; gap:8px 16px; margin:0; }
     dt { color:var(--muted); }
     dd { margin:0; color:var(--ink); }
-    aside .nav-title { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8fa9a3; margin:16px 12px 6px; }
-    .thumb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
-    .thumb { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; }
-    .thumb img { width:100%; height:150px; object-fit:cover; border-radius:8px; background:#eef2f1; }
-    .thumb .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .thumb input[type=file] { width:100%; font-size:13px; }
-    .thumb input[type=text], .thumb input[type=number] { width:100%; }
-    .btn.small { padding:6px 12px; font-size:13px; }
-    .btn.danger { background:#fff; color:var(--danger); border-color:var(--danger); }
-    .tag { font-size:11px; background:var(--green-50); color:#255f22; padding:1px 8px; border-radius:999px; }
     .pager { display:flex; gap:8px; margin-top:14px; align-items:center; }
     .muted { color:var(--muted); }
     .unread td { font-weight:600; }
+    .thumb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; margin:14px 0 24px; }
+    .thumb { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+    .thumb img { width:100%; height:150px; object-fit:cover; border-radius:8px; background:#eef2f1; display:block; }
+    .thumb input[type=file] { width:100%; font-size:12px; }
+    .thumb input:not([type=file]):not([type=hidden]) { width:100%; }
+    .thumb .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .tag { display:inline-block; background:#fff4d6; color:#8a6100; border-radius:999px; font-size:11px; font-weight:600; padding:1px 8px; }
+    .attn { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+    .attn a { display:flex; gap:12px; align-items:center; padding:14px; border:1px solid var(--line); border-radius:12px; color:var(--ink); background:#fff; }
+    .attn a:hover { border-color:var(--green); background:var(--green-50); }
+    .attn i { font-size:20px; color:var(--green); } .attn strong { display:block; font-size:20px; line-height:1.1; } .attn span { color:var(--muted); font-size:13px; }
+    .attn a.warn i { color:#e67134; } .attn a.ok { opacity:.7; }
+    .quick { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+    .meter { height:6px; border-radius:99px; background:#e8eeec; overflow:hidden; width:120px; margin-bottom:4px; } .meter i { display:block; height:100%; background:var(--green); }
+    .miss { display:flex; flex-wrap:wrap; gap:4px; } .miss span { background:#fdf1e6; color:#8a4a12; border-radius:99px; font-size:11px; padding:1px 8px; }
+    .toolbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px; } .toolbar input[type=search] { min-width:260px; }
+    .menu-btn { display:none; }
+    .topbar { display:flex; justify-content:flex-end; margin:-6px 0 6px; }
+    .newmenu { position:relative; } .newmenu summary { list-style:none; } .newmenu summary::-webkit-details-marker { display:none; }
+    .newmenu .menu { position:absolute; right:0; top:44px; z-index:20; min-width:250px; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(20,48,43,.15); padding:6px; }
+    .newmenu .menu a { display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:8px; color:var(--ink); } .newmenu .menu a:hover { background:var(--green-50); }
+    aside { position:sticky; top:0; height:100vh; overflow-y:auto; }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid #9fd39a; outline-offset:2px; }
+    .flash { animation:flashin .25s ease-out; } @keyframes flashin { from { opacity:0; transform:translateY(-6px); } }
     @media (max-width: 860px) {
       .layout { grid-template-columns:1fr; }
-      aside nav { display:flex; flex-wrap:wrap; gap:4px; }
+      aside { position:static; height:auto; padding:12px 14px; }
+      aside .brand { margin-bottom:0; }
+      aside .menu-btn { display:inline-flex; margin-left:auto; background:rgba(255,255,255,.1); color:#fff; border:0; border-radius:8px; padding:8px 12px; font-size:18px; }
+      aside nav { display:none; margin-top:12px; }
+      aside.open nav { display:block; }
+      .layout aside .brand { display:flex; }
       .stats { grid-template-columns:repeat(2,1fr); }
       main { padding:20px 16px; }
       dl { grid-template-columns:1fr; }
@@ -76,16 +101,21 @@
 <div class="layout">
   <aside>
     <a class="brand" href="{{ url_for('admin.dashboard') }}"><img src="/assets/img/logo.png" alt="">Clinic Admin</a>
+    <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false"><i class="bi bi-list"></i></button>
     <nav>
       <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
       <a href="{{ url_for('admin.appointments') }}" class="{{ 'active' if request.endpoint and 'appointment' in request.endpoint }}"><i class="bi bi-calendar2-week"></i> Appointments</a>
       <a href="{{ url_for('admin.messages') }}" class="{{ 'active' if request.endpoint == 'admin.messages' }}"><i class="bi bi-envelope"></i> Messages</a>
-      <div class="nav-title">Website content</div>
-      <a href="{{ url_for('admin.blog') }}" class="{{ 'active' if request.endpoint and 'blog' in request.endpoint }}"><i class="bi bi-journal-text"></i> Blog</a>
-      <a href="{{ url_for('admin.images') }}" class="{{ 'active' if request.endpoint == 'admin.images' }}"><i class="bi bi-images"></i> Site pictures</a>
-      <a href="{{ url_for('admin.doctors') }}" class="{{ 'active' if request.endpoint == 'admin.doctors' }}"><i class="bi bi-person-badge"></i> Doctors</a>
-      <a href="{{ url_for('admin.gallery') }}" class="{{ 'active' if request.endpoint == 'admin.gallery' }}"><i class="bi bi-card-image"></i> Gallery</a>
-      <div class="nav-title">&nbsp;</div>
+      <div class="navgroup">Website content</div>
+      <a href="{{ url_for('admin.site_home') }}" class="{{ 'active' if request.endpoint == 'admin.site_home' }}"><i class="bi bi-grid"></i> Overview</a>
+      <a href="{{ url_for('admin.content_list', kind='doctors') }}" class="{{ 'active' if request.view_args and request.view_args.get('kind') == 'doctors' }}"><i class="bi bi-person-badge"></i> Doctors</a>
+      <a href="{{ url_for('admin.content_list', kind='conditions') }}" class="{{ 'active' if request.view_args and request.view_args.get('kind') == 'conditions' }}"><i class="bi bi-clipboard2-pulse"></i> Conditions</a>
+      <a href="{{ url_for('admin.reviews_queue') }}" class="{{ 'active' if request.endpoint in ('admin.reviews_queue',) or (request.view_args and request.view_args.get('kind') == 'reviews') }}"><i class="bi bi-chat-quote"></i> Reviews{% if pending_reviews %}<span class="badge">{{ pending_reviews }}</span>{% endif %}</a>
+      <a href="{{ url_for('admin.blog') }}" class="{{ 'active' if request.endpoint in ('admin.blog', 'admin.blog_edit') }}"><i class="bi bi-journal-text"></i> Blog</a>
+      <a href="{{ url_for('admin.gallery') }}" class="{{ 'active' if request.endpoint == 'admin.gallery' }}"><i class="bi bi-images"></i> Gallery</a>
+      <a href="{{ url_for('admin.images') }}" class="{{ 'active' if request.endpoint == 'admin.images' }}"><i class="bi bi-image"></i> Site pictures</a>
+      <a href="{{ url_for('admin.site_settings') }}" class="{{ 'active' if request.endpoint == 'admin.site_settings' }}"><i class="bi bi-sliders"></i> Site settings</a>
+      <div class="navgroup">Visits and messages</div>
       <a href="/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> View website</a>
       <form method="post" action="{{ url_for('admin.logout') }}">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
@@ -94,6 +124,17 @@
     </nav>
   </aside>
   <main>
+    <div class="topbar">
+      <details class="newmenu"><summary class="btn"><i class="bi bi-plus-lg"></i> New</summary>
+        <div class="menu">
+          <a href="{{ url_for('admin.blog_edit') }}"><i class="bi bi-journal-text"></i> Article</a>
+          <a href="{{ url_for('admin.content_edit', kind='doctors', item_id='new') }}"><i class="bi bi-person-badge"></i> Doctor</a>
+          <a href="{{ url_for('admin.content_edit', kind='conditions', item_id='new') }}"><i class="bi bi-clipboard2-pulse"></i> Condition page</a>
+          <a href="{{ url_for('admin.gallery') }}#add"><i class="bi bi-images"></i> Gallery picture</a>
+          <a href="{{ url_for('admin.appointment_new') }}"><i class="bi bi-calendar2-plus"></i> Appointment (phone / walk-in)</a>
+        </div>
+      </details>
+    </div>
     {% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}{% endwith %}
     {% block content %}{% endblock %}
   </main>
@@ -101,5 +142,24 @@
 {% else %}
   {% block public %}{% endblock %}
 {% endif %}
+<script>
+(function () {
+  var side = document.querySelector("aside"), btn = document.querySelector(".menu-btn");
+  if (btn) btn.addEventListener("click", function () { var o = side.classList.toggle("open"); btn.setAttribute("aria-expanded", o); });
+  // Show the chosen picture before saving, so staff see what they are about to upload.
+  document.addEventListener("change", function (e) {
+    var f = e.target;
+    if (f.type !== "file" || !f.files || !f.files[0] || !/^image\//.test(f.files[0].type)) return;
+    var holder = f.closest(".thumb"); var img = holder && holder.querySelector("img");
+    if (img) { img.src = URL.createObjectURL(f.files[0]); img.style.outline = "3px solid #9fd39a"; }
+  });
+  // Live filter for lists that have a search box.
+  var s = document.querySelector("[data-filter]");
+  if (s) s.addEventListener("input", function () {
+    var q = s.value.trim().toLowerCase();
+    document.querySelectorAll("[data-item]").forEach(function (n) { n.hidden = q && n.getAttribute("data-item").toLowerCase().indexOf(q) < 0; });
+  });
+})();
+</script>
 </body>
 </html>

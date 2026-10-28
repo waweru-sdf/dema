@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% block title %}Site settings{% endblock %}
+{% block content %}
+<h1>Site settings</h1>
+<form method="post" class="card" style="max-width:760px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% for key, (default, help) in defs.items() %}
+  <div class="field">
+    <label for="{{ key }}">{{ key.replace('_', ' ')|capitalize }}</label>
+    <input type="text" id="{{ key }}" name="{{ key }}" value="{{ values[key] }}">
+    <div class="help">{{ help }}</div>
+  </div>
+  {% endfor %}
+  <button class="btn" type="submit">Save settings</button>
+</form>
+{% endblock %}

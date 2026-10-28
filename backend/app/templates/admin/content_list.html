@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ cfg.plural }}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+  <h1>{{ cfg.plural }}</h1>
+  <a class="btn" href="{{ url_for('admin.content_edit', kind=kind, item_id='new') }}"><i class="bi bi-plus-lg"></i> Add</a>
+</div>
+<div class="card table-wrap">
+<table>
+  <thead><tr>
+    {% if kind == 'doctors' %}<th></th><th>Name</th><th>Profile</th><th>Visible</th><th></th>
+    {% elif kind == 'conditions' %}<th>Name</th><th>Doctors</th><th>Reviewed by</th><th>Visible</th><th></th>
+    {% else %}<th>Title</th><th>Category</th><th>Date</th><th>Status</th><th></th>{% endif %}
+  </tr></thead>
+  <tbody>
+  {% for o in items %}
+    <tr>
+      {% if kind == 'doctors' %}
+        {% set done = o.completeness.values()|select|list|length %}{% set total = o.completeness|length %}
+        <td style="width:60px">{% if o.photo_url %}<img src="{{ o.photo_url }}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover">{% endif %}</td>
+        <td><strong>{{ o.name }}</strong><br><span class="muted">{{ o.title }}</span></td>
+        <td><div class="meter" title="{{ done }} of {{ total }}"><i style="width:{{ (done * 100 // total) }}%"></i></div>
+          {% set missing = o.completeness.items()|rejectattr(1)|map(attribute=0)|list %}
+          {% if missing %}<div class="miss">{% for m in missing %}<span>{{ m }}</span>{% endfor %}</div>{% else %}<span class="muted">Complete</span>{% endif %}</td>
+        <td><span class="pill {{ 'approved' if o.published else 'draft' }}">{{ 'Shown' if o.published else 'Hidden' }}</span></td>
+      {% elif kind == 'conditions' %}
+        <td><strong>{{ o.name }}</strong></td><td>{{ o.doctors|length }}</td>
+        <td>{% if o.reviewed_by and o.reviewed_on %}{{ o.reviewed_by.name }}{% else %}<span class="pill sample">Needs doctor review</span>{% endif %}</td>
+        <td><span class="pill {{ 'approved' if o.published else 'draft' }}">{{ 'Shown' if o.published else 'Hidden' }}</span></td>
+      {% else %}
+        <td><strong>{{ o.title }}</strong>{% if o.is_sample %} <span class="pill sample">Sample</span>{% endif %}</td>
+        <td>{{ o.category }}</td><td>{{ o.published_at.strftime('%d %b %Y') }}</td>
+        <td><span class="pill {{ 'approved' if o.published else 'draft' }}">{{ 'Published' if o.published else 'Draft' }}</span></td>
+      {% endif %}
+      <td style="text-align:right"><a class="btn ghost small" href="{{ url_for('admin.content_edit', kind=kind, item_id=o.id) }}">Edit</a></td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="muted">Nothing here yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
