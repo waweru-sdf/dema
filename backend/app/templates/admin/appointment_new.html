@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% block title %}Add appointment{% endblock %}
+{% block content %}
+<h1>Add an appointment</h1>
+<p class="muted">For patients who call or walk in. The same checks as online booking apply, so a time that is already taken is refused. Email is optional here.</p>
+<form class="card" method="post" style="max-width:760px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% macro err(k) %}{% if errors.get(k) %}<div class="help" style="color:var(--danger)">{{ errors[k] }}</div>{% endif %}{% endmacro %}
+  <div class="checks" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+    <div class="field"><label>First name</label><input type="text" name="first_name" value="{{ form.first_name }}" required>{{ err('first_name') }}</div>
+    <div class="field"><label>Last name</label><input type="text" name="last_name" value="{{ form.last_name }}" required>{{ err('last_name') }}</div>
+    <div class="field"><label>Phone</label><input type="text" name="phone" value="{{ form.phone }}" required>{{ err('phone') }}</div>
+    <div class="field"><label>Email (optional)</label><input type="text" name="email" value="{{ form.email }}">{{ err('email') }}</div>
+    <div class="field"><label>Service</label><select name="service" required><option value="">Choose…</option>{% for s in services %}<option value="{{ s.slug }}" {{ 'selected' if form.service == s.slug }}>{{ s.name }}</option>{% endfor %}</select>{{ err('service') }}</div>
+    <div class="field"><label>Branch</label><select name="branch" required><option value="">Choose…</option>{% for b in branches %}<option value="{{ b.slug }}" {{ 'selected' if form.branch == b.slug }}>{{ b.name }}</option>{% endfor %}</select>{{ err('branch') }}</div>
+    <div class="field"><label>Doctor</label><select name="doctor"><option value="">Any available doctor</option>{% for slug, name in doctors %}<option value="{{ slug }}" {{ 'selected' if form.doctor == slug }}>{{ name }}</option>{% endfor %}</select>{{ err('doctor') }}</div>
+    <div class="field"><label>Date</label><input type="date" name="date" value="{{ form.date }}" required>{{ err('date') }}</div>
+    <div class="field"><label>Time</label><select name="time" required><option value="">Choose…</option>{% for t in slots %}<option {{ 'selected' if form.time == t }}>{{ t }}</option>{% endfor %}</select>{{ err('time') }}</div>
+    <div class="field"><label>Status</label><select name="status">{% for st in statuses %}<option value="{{ st }}" {{ 'selected' if (form.status or 'confirmed') == st }}>{{ st.replace('_', ' ') | capitalize }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="field"><label>Notes</label><textarea name="notes">{{ form.notes }}</textarea></div>
+  <button class="btn" type="submit"><i class="bi bi-check-lg"></i> Save appointment</button>
+  <a class="btn ghost" href="{{ url_for('admin.appointments') }}">Cancel</a>
+</form>
+{% endblock %}

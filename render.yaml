@@ -6,6 +6,7 @@ services:
     runtime: python
     plan: free
     branch: main
+    # The React site is already built into frontend/dist (run `npm run build` in frontend/ and commit it after changing the site).
     buildCommand: pip install -r backend/requirements.txt
     startCommand: gunicorn --chdir backend -w 1 --threads 4 --timeout 60 -b 0.0.0.0:$PORT wsgi:app
     healthCheckPath: /api/health

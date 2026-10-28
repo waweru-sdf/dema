@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}Website content{% endblock %}
+{% block content %}
+<h1>Website content</h1>
+<div class="stats">
+  <a class="stat" href="{{ url_for('admin.content_list', kind='doctors') }}"><strong>{{ counts.doctors }}</strong><span>Doctors</span></a>
+  <a class="stat" href="{{ url_for('admin.content_list', kind='conditions') }}"><strong>{{ counts.conditions }}</strong><span>Condition pages</span></a>
+  <a class="stat" href="{{ url_for('admin.reviews_queue') }}"><strong>{{ counts.pending }}</strong><span>Reviews waiting</span></a>
+  <a class="stat" href="{{ url_for('admin.blog') }}"><strong>{{ counts.posts }}</strong><span>Blog articles</span></a>
+</div>
+{% if counts.sample_reviews or counts.sample_posts %}
+<div class="flash error">The website still shows <strong>{{ counts.sample_reviews }} sample reviews</strong> and <strong>{{ counts.sample_posts }} sample articles</strong>, each labelled "Sample". Edit or delete them before launch.</div>
+{% endif %}
+<div class="card">
+  <h2 style="margin-top:0">Before you launch</h2>
+  <ol>
+    <li>Open each doctor and fill in photo, qualifications, languages, subspecialties and linked conditions.</li>
+    <li>Have a doctor read each condition page, then choose them under "Medically reviewed by".</li>
+    <li>Replace the sample reviews and articles with real ones, or delete them.</li>
+    <li>Check Site settings: the telemedicine address and the prices shown on the site.</li>
+  </ol>
+</div>
+{% endblock %}

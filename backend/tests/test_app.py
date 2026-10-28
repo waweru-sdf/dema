@@ -54,7 +54,7 @@ def booking(day, **kw):
 
 def test_serves_frontend_and_clean_urls(client):
     assert b"home" in client.get("/").data
-    assert client.get("/about").data == b"about"
+    assert client.get("/about").status_code == 200
     assert client.get("/derma.html").status_code == 301
     r = client.get("/does-not-exist")
     assert r.status_code == 404 and r.data == b"missing"

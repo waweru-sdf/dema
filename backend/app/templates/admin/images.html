@@ -2,14 +2,15 @@
 {% block title %}Site pictures{% endblock %}
 {% block content %}
 <h1>Site pictures</h1>
+<div class="toolbar"><input type="search" data-filter placeholder="Search pictures…" aria-label="Search pictures"></div>
 <p class="muted">Pick a new picture to replace one on the website. JPG, PNG or WebP up to 8 MB; large pictures are shrunk automatically.
 "Restore original" brings back the picture the website shipped with. Doctors and the gallery are on their own pages.</p>
 {% for group in ["Page pictures", "Service pictures"] %}
 <h2 style="color:var(--ink);font-size:18px;margin:24px 0 12px">{{ group }}</h2>
 <div class="thumb-grid">
   {% for i in items if i.group == group %}
-  <div class="thumb">
-    <img src="{{ i.url }}?t={{ range(1, 10**6) | random }}" alt="">
+  <div class="thumb" data-item="{{ i.title }} {{ i.path }}">
+    <img src="{{ i.url }}?t={{ range(1, 10**6) | random }}" alt="" loading="lazy">
     <strong>{{ i.title }}</strong>
     <span class="muted" style="font-size:12px">{{ i.path }} {% if i.changed %}<span class="tag">replaced</span>{% endif %}</span>
     <form method="post" action="{{ url_for('admin.image_replace') }}" enctype="multipart/form-data">

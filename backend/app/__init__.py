@@ -7,26 +7,32 @@ import click
 from flask import Flask, Response, abort, jsonify, redirect, request, send_from_directory
 from flask_cors import CORS
 
-from .blog_seed import seed_sample_posts
-from .clinic_data import DOCTORS
 from .config import Config
-from .media import MAX_UPLOAD_BYTES
-from .models import AdminUser, Doctor, GalleryImage, ImageOverride, MediaFile, db
+from .models import AdminUser, ImageOverride, MediaFile, db
 
 # Old page names from the previous site, redirected so existing links keep working.
 LEGACY_REDIRECTS = {
-    "index-2.html": "index.html",
-    "index.php": "index.html",
-    "general.html": "general-dermatology.html",
-    "derma.html": "dermatologic-surgery.html",
-    "cosmetic.html": "cosmetic-dermatology.html",
+    "index-2.html": "/",
+    "index.php": "/",
+    "index.html": "/",
+    "appointment.html": "/appointment",
+    "blog.html": "/blog",
+    "post.html": "/blog",
+    "about.html": "/about",
+    "services.html": "/services",
+    "contact.html": "/contact",
+    "general.html": "/services",
+    "general-dermatology.html": "/services",
+    "derma.html": "/services",
+    "dermatologic-surgery.html": "/services",
+    "cosmetic.html": "/services",
+    "cosmetic-dermatology.html": "/services",
 }
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, instance_relative_config=True, static_folder=None)  # the frontend folder is served by register_frontend()
     app.config.from_object(config_class)
-    app.config.setdefault("MAX_CONTENT_LENGTH", MAX_UPLOAD_BYTES + 1024 * 1024)
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -39,33 +45,42 @@ def create_app(config_class=Config):
 
     from .admin import admin
     from .api import api
+    from . import admin_content, admin_extra  # noqa: F401  (add the content, blog and picture pages to the admin blueprint)
+    from .content_models import Doctor  # noqa: F401  (registers the content tables)
+    from .content_seed import seed_content
+    from .seo import seo
+    from .site_api import site_api
     app.register_blueprint(api)
+    app.register_blueprint(site_api)
     app.register_blueprint(admin)
+    app.register_blueprint(seo)
 
     with app.app_context():
-        db.create_all()
-        seed_content()
-        if app.config.get("SEED_SAMPLE_POSTS"):
-            seed_sample_posts(app.config["FRONTEND_DIR"])
+        try:
+            db.create_all()
+        except Exception:  # two workers creating the tables at the same moment: the second one just retries
+            db.session.rollback()
+            db.create_all()
         ensure_admin(app)
+        try:
+            seed_content(app)
+            from .content_seed import import_legacy_doctors
+            import_legacy_doctors()
+        except Exception:  # never stop the site from starting because of sample content
+            db.session.rollback()
+            app.logger.exception("Could not add starter content")
+        if app.config.get("SEED_SAMPLE_POSTS"):
+            try:
+                from .blog_seed import seed_sample_posts
+                seed_sample_posts(app.config["FRONTEND_DIR"])
+            except Exception:
+                db.session.rollback()
+                app.logger.exception("Could not add sample articles")
 
     register_frontend(app)
     register_security_headers(app)
     register_cli(app)
     return app
-
-
-def seed_content():
-    """First start only: copy the built-in doctors and gallery into the database so staff can edit them."""
-    if Doctor.query.count() == 0:
-        for i, d in enumerate(DOCTORS):
-            db.session.add(Doctor(slug=d["slug"], name=d["name"], role="Dermatology team", sort_order=i,
-                                  photo_path=f"assets/img/doctors/{d['slug']}.jpg"))
-    if GalleryImage.query.count() == 0:
-        for i in range(1, 5):
-            db.session.add(GalleryImage(photo_path=f"assets/img/gallery/{i}.jpg", sort_order=i,
-                                        caption=f"Clinic gallery image {i}"))
-    db.session.commit()
 
 
 def ensure_admin(app):
@@ -91,18 +106,16 @@ def ensure_admin(app):
 def register_frontend(app):
     frontend = Path(app.config["FRONTEND_DIR"]).resolve()
 
+    from .seo import render_shell
+
     @app.get("/")
     def home():
-        return send_from_directory(frontend, "index.html")
-
-    @app.get("/blog/<slug>")
-    def blog_post_page(slug):
-        """Every article uses the same page; post.html loads the text from /api/posts/<slug>."""
-        return send_from_directory(frontend, "post.html")
+        html = render_shell("/")
+        return html if html else send_from_directory(frontend, "index.html")
 
     @app.get("/media/<int:media_id>")
     def media(media_id):
-        """Uploaded pictures. The id changes on every upload, so browsers may cache them for good."""
+        """Uploaded pictures (article covers, gallery). The id changes on every upload, so browsers may cache them."""
         row = db.session.get(MediaFile, media_id)
         if not row:
             abort(404)
@@ -115,7 +128,7 @@ def register_frontend(app):
     @app.get("/<path:filename>")
     def static_site(filename):
         if filename in LEGACY_REDIRECTS:
-            return redirect("/" + LEGACY_REDIRECTS[filename], code=301)
+            return redirect(LEGACY_REDIRECTS[filename], code=301)
         if filename.startswith("assets/img/"):
             # A picture staff replaced in /admin/images wins over the file shipped with the site.
             over = ImageOverride.query.filter_by(path=filename).first()
@@ -124,6 +137,9 @@ def register_frontend(app):
                 resp.cache_control.public = True
                 resp.cache_control.max_age = 300
                 return resp
+        page_html = render_shell("/" + filename)
+        if page_html:
+            return page_html
         target = (frontend / filename).resolve()
         if frontend not in target.parents and target != frontend:
             abort(404)
@@ -132,10 +148,9 @@ def register_frontend(app):
         elif not target.exists() and (frontend / f"{filename}.html").exists():
             filename = f"{filename}.html"  # allow clean URLs such as /about
         response = send_from_directory(frontend, filename)
-        if filename.startswith("assets/"):
+        if filename.startswith(("assets/", "static/")):
             response.cache_control.public = True
-            # Pictures can be replaced from /admin, so keep their cache short; code and fonts can stay a week.
-            response.cache_control.max_age = 300 if filename.startswith("assets/img/") else 60 * 60 * 24 * 7
+            response.cache_control.max_age = 60 * 60 * 24 * 7
         return response
 
     @app.errorhandler(404)
@@ -178,15 +193,6 @@ def register_cli(app):
         db.session.add(user)
         db.session.commit()
         click.echo(f"Admin user '{username}' saved.")
-
-    @app.cli.command("seed-blog")
-    def seed_blog():
-        """Add the three sample articles (only works while the blog has no posts)."""
-        from .models import BlogPost
-        if BlogPost.query.count():
-            raise click.ClickException("The blog already has posts. Delete them in /admin/blog first.")
-        seed_sample_posts(app.config["FRONTEND_DIR"])
-        click.echo("Three sample articles added.")
 
     @app.cli.command("init-db")
     def init_db():

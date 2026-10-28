@@ -2,6 +2,20 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
+<div class="quick">
+  <a class="btn" href="{{ url_for('admin.blog_edit') }}"><i class="bi bi-pencil-square"></i> Write an article</a>
+  <a class="btn ghost" href="{{ url_for('admin.reviews_queue') }}"><i class="bi bi-chat-quote"></i> Review queue</a>
+  <a class="btn ghost" href="{{ url_for('admin.content_list', kind='doctors') }}"><i class="bi bi-person-badge"></i> Doctors</a>
+  <a class="btn ghost" href="/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> View website</a>
+</div>
+<div class="card">
+  <h2 style="margin-top:0;font-size:18px;color:var(--ink)">Needs your attention</h2>
+  <div class="attn">
+    {% for a in attention %}
+    <a href="{{ a.url }}" class="{{ 'warn' if a.count else 'ok' }}"><i class="bi bi-{{ a.icon }}"></i><div><strong>{{ a.count }}</strong><span>{{ a.label }}</span></div></a>
+    {% endfor %}
+  </div>
+</div>
 <div class="stats">
   <a class="stat" href="{{ url_for('admin.appointments', status='pending') }}"><strong>{{ stats.pending }}</strong><span>Pending requests</span></a>
   <a class="stat" href="{{ url_for('admin.appointments', **{'from': today.isoformat(), 'to': today.isoformat()}) }}"><strong>{{ stats.today }}</strong><span>Appointments today</span></a>

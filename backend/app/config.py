@@ -29,7 +29,10 @@ def _frontend_dir():
         return os.getenv("FRONTEND_DIR")
     # Repo layout: dema/frontend next to dema/backend. Fall back to backend/frontend if present.
     inside = BASE_DIR / "frontend"
-    return str(inside if inside.exists() else BASE_DIR.parent / "frontend")
+    if inside.exists():
+        return str(inside)
+    built = BASE_DIR.parent / "frontend" / "dist"   # the React site, after `npm run build`
+    return str(built if built.exists() else BASE_DIR.parent / "frontend")
 
 
 class Config:
@@ -84,10 +87,12 @@ class Config:
     SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", False)
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 8  # 8 hours
 
-    JSON_SORT_KEYS = False
+    # Starter blog posts and reviews, clearly marked 'Sample' until staff replace them. Set to 0 to skip.
+    SEED_SAMPLE_CONTENT = _bool("SEED_SAMPLE_CONTENT", True)
+    SEED_SAMPLE_POSTS = _bool("SEED_SAMPLE_POSTS", True)  # three example articles, only while the blog is empty
+    MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # photo uploads
 
-    # Put three example articles in the blog the first time it is empty, so the section never looks bare.
-    SEED_SAMPLE_POSTS = _bool("SEED_SAMPLE_POSTS", True)
+    JSON_SORT_KEYS = False
 
 
 class TestConfig(Config):
@@ -99,4 +104,5 @@ class TestConfig(Config):
     BREVO_API_KEY = ""
     ADMIN_USERNAME = ""
     RATE_LIMIT_PER_HOUR = 1000
+    SEED_SAMPLE_CONTENT = True
     SEED_SAMPLE_POSTS = False
