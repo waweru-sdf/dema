@@ -1,0 +1,61 @@
+# Dr. Feysel Dermatology Clinic: website + backend front door.
+# Real files (the website, pictures, fonts) are served as they are. Everything else goes to index.php (Laravel).
+Options -Indexes -MultiViews
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Always use https
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# The old home page file is now just the home page
+RewriteCond %{THE_REQUEST} \s/index\.html[\s?]
+RewriteRule ^index\.html$ / [R=301,L]
+
+# Pictures go through Laravel first, so a picture replaced in the admin wins over the one shipped with the site
+RewriteRule ^assets/img/.+\.(jpe?g|png|webp)$ index.php [L]
+
+# Real files and folders are served as they are
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Every other address is handled by Laravel: /api, /admin, /media, sitemap, robots, and each website page
+RewriteRule ^ index.php [L]
+</IfModule>
+
+# Never show hidden, backup, database or environment files
+<FilesMatch "^\.(?!well-known)|\.(bak|sql|log|env|ini|lock|md|dist)$|^(composer\.(json|lock)|artisan)$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Strict-Transport-Security "max-age=31536000"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+<FilesMatch "\.(woff2?|svg|css|js)$">
+  Header set Cache-Control "public, max-age=2592000"
+</FilesMatch>
+<FilesMatch "(index\.html|manifest\.json)$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml text/plain application/xml
+</IfModule>
+
+# Uploads: allow big enough pictures (the admin shrinks them)
+<IfModule mod_php.c>
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
+</IfModule>
+<IfModule LiteSpeed>
+php_value upload_max_filesize 10M
+php_value post_max_size 12M
+</IfModule>
